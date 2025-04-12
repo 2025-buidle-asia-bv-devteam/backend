@@ -16,39 +16,37 @@ app.post('/chat', async (req, res) => {
   if (!message || message.trim() === "") {
     return res.status(400).json({ error: "빈 메시지는 허용되지 않습니다." });
   }
+
   try {
+    // FastAPI 서버에 메시지를 보냄
     const response = await axios.post('http://127.0.0.1:8000/chat', { message });
-    const replyText = response.data.reply;
+    // FastAPI에서 주는 응답 전체
+    const data = response.data;
 
-    // 정규표현식을 사용해 노트 정보 추출 (각 노트별로 " - " 앞에 재료 이름과 괄호 안의 비율 추출)
-    // 예시: "- 탑 노트: 블랙 장미 블라스트 (30%) - ..."
-    const extractNote = (label) => {
-      const regex = new RegExp(`-\\s*${label}\\s*:\\s*([^\\(]+)\\((\\d+)%\\)`, 'i');
-      const match = replyText.match(regex);
-      if (match) {
-        return {
-          name: match[1].trim(),
-          ratio: parseInt(match[2], 10)
-        };
-      }
-      return null;
-    };
+    // 1) raw_reply 그대로 
+    const fullReply = data.raw_reply;
 
-    const topNote = extractNote('탑 노트');
-    const middleNote = extractNote('미들 노트');
-    const baseNote = extractNote('베이스 노트');
+    // 2) 구조화된 노트 정보는 이미 파싱된 상태
+    const topNote = data.top_note;         
+    const middleNote = data.middle_note;   
+    const baseNote = data.base_note;       
+    
+    const structuredData = data.structured_data;
 
-    // 최종 결과 구조 구성
+    // 최종결과
     const result = {
-      full_reply: replyText,
+      full_reply: fullReply,
       recipe: {
         top_note: topNote,
         middle_note: middleNote,
-        base_note: baseNote
-      }
+        base_note: baseNote,
+      },
+      structured_data: structuredData
     };
 
+    // 결과를 그대로 반환
     res.json(result);
+
   } catch (error) {
     console.error("Error:", error.message);
     res.status(500).json({ error: "서버 내부 오류 발생" });
